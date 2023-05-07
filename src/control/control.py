@@ -12,19 +12,27 @@ class TestbedProcess:
     ):
         self._name = name
         self._path = path
-        self._args : 'list' = None
-        self._proc : 'Popen' = None
+        self._args: 'list' = None
+        self._proc: 'Popen' = None
 
     @property
     def name(self):
         return self._name
 
     @property
+
     def path(self):
         return self._path
-    
+
+    @property
+    def pid(self):
+        return self._proc.pid
+
     def is_running(self):
-        return self._proc is not None
+        return (
+            (self._proc is not None) and 
+            (not self._proc.poll())
+        )
 
     def run(self, args: 'list'):
         if not self.is_running():
@@ -56,64 +64,109 @@ class TestbedControl:
     def __init__(
         self,
         testbed: 'TestbedModel',
-        buildToolPath: 'str',
-        serialReaderPath: 'str',
-        rpcClientPath: 'str'
+        config: 'dict' = None
     ):
         self._testbed = testbed
+        self._config = config
+        self._buildTool: 'TestbedProcess' = None
+        self._serialReader: 'TestbedProcess' = None
+        self._rpcClient: 'TestbedProcess' = None
 
-        self._buildTool: 'TestbedProcess' = TestbedProcess(
+        self._setup()
+
+    def _setup(self):
+        self._buildTool = TestbedProcess(
             name='Testbed Build Tool',
-            path=buildToolPath
+            path=self._config['testbed_control']['build_tool_path']
         )
 
-        self._serialReader: 'TestbedProcess' = TestbedProcess(
+        self._serialReader = TestbedProcess(
             name='Testbed Serial Reader',
-            path=serialReaderPath
+            path=self._config['testbed_control']['serial_reader_path']
         )
 
-        self._rpcClient: 'TestbedProcess' = TestbedProcess(
+        self._rpcClient = TestbedProcess(
             name='Testbed RPC Client',
-            path=rpcClientPath
+            path=self._config['testbed_control']['rpc_client_path']
         )
 
     def start_motes_firmware(self):
         ports = [m.port for m in self._testbed.motes]
         ports = ','.join(ports)
 
-        hopseq = [str(h) for h in self._testbed.hopseq]
-        hopseq = ','.join(self._testbed.hopseq)
+        if ports:
+            hopseq = [str(h) for h in self._testbed.hopseq]
+            hopseq = ','.join(self._testbed.hopseq)
 
-        args = (
-            f'-f all ' +
-            f'-p {self._testbed.txPower} ' +
-            f'-i {self._testbed.txIntv} ' +
-            f'-l {self._testbed.hopseqLen} ' +
-            f'-h {hopseq} ' +
-            f'-u {ports}'
-        )
+            args = [
+                '-f', 'all',
+                '-u', ports
+            ]
 
-        self._buildTool.run(args)
+            args += ['-p', self._testbed.txPower] if self._testbed.txPower else []
+            args += ['-i', self._testbed.txIntv] if self._testbed.txIntv else []
+            args += ['-l', self._testbed.hopseqLen] if self._testbed.hopseqLen else []
+            args += ['-h', hopseq] if hopseq else []
+
+            self._buildTool.run(args)
 
     def stop_motes_firmware(self):
         ports = [m.port for m in self._testbed.motes]
         ports = ','.join(ports)
 
-        args = (
-            f'-f stopped ' +
-            f'-u {ports}'
-        )
+        args = [
+            '-f', 'stopped',
+            '-u', ports
+        ]
 
         self._buildTool.run(args)
 
     def start_serial_reader(self):
-        pass
+        ports = [m.port for m in self._testbed.motes]
+        ports = ','.join(ports)
+
+        args = [
+            '-p', ports
+        ]
+
+        self._serialReader.run(args)
 
     def stop_serial_reader(self):
-        pass
+        self._serialReader.kill()
 
     def start_rpc_client(self):
-        pass
+        args = [
+            '-a', self._config['rpc_client']['api_addr'],
+            '-p', self._config['rpc_client']['api_port'],
+            '-i', 60,
+            '-r', 'analyze',
+            '-g', 'all',
+            '-t', self._testbed.name
+        ]
+
+        self._rpcClient.run(args)
 
     def stop_rpc_client(self):
-        pass
+        self._rpcClient.kill()
+
+    def start_testbed(self, verbose=False):
+        self.start_motes_firmware()
+
+        if self._buildTool.is_running():
+            retcode = self._buildTool._proc.wait()
+            if verbose:
+                if retcode == 0:
+                    print('Firmware written to motes successfully.')
+                else:
+                    print('Error when trying to write firmware to motes.')
+
+            if retcode == 0:
+                self.start_serial_reader()
+                if verbose:
+                    print(f'start serial reader with '
+                        f'PID {self._serialReader.pid}.')
+
+                self.start_rpc_client()
+                if verbose:
+                    print(f'start analysis RPC client with '
+                        f'PID {self._rpcClient.pid}.')

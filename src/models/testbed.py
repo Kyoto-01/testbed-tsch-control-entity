@@ -1,7 +1,7 @@
 from uuid import uuid4
 
 from database import Database
-from models import MoteModel
+from models.mote import MoteModel
 
 
 class TestbedModel:
@@ -9,12 +9,12 @@ class TestbedModel:
     def __init__(
         self,
         name: 'str',
-        motes: 'list[MoteModel]',
+        motes: 'list',
         txPower: 'int',
         txIntv: 'float',
         hopseqLen: 'int',
         hopseq: 'list[int]',
-        id: 'str' = uuid4()
+        id: 'str' = str(uuid4())
     ):
         self._id = id
         self._name = name
@@ -53,10 +53,12 @@ class TestbedModel:
         return self._hopseq
     
     def to_dict(self) -> 'dict':
+        motes = [m.to_dict() for m in self._motes]
+
         data = {
             'id': self._id,
             'name': self._name,
-            'motes': self._motes,
+            'motes': motes,
             'tx_power': self._txPower,
             'tx_intv': self._txIntv,
             'hop_seq_len': self._hopseqLen,
@@ -67,10 +69,18 @@ class TestbedModel:
     
     @staticmethod
     def from_dict(data: 'dict') -> 'TestbedModel':
+        motes = [
+            MoteModel(
+                port=m['port'],
+                is_busy=True, 
+                id=m['id']
+            ) for m in data['motes']
+        ]
+
         data = TestbedModel(
             id=data['id'],
             name=data['name'],
-            motes=data['motes'],
+            motes=motes,
             txPower=data['tx_power'],
             txIntv=data['tx_intv'],
             hopseqLen=data['hop_seq_len'],

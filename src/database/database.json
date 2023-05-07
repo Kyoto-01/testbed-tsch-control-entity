@@ -1,6 +1,1 @@
-{
-    "resources": {
-        "motes": {},
-        "testbeds": {}
-    }
-}
+{"resources": {"motes": {}, "testbeds": {}}}

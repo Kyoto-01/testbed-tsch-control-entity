@@ -9,7 +9,7 @@ class MoteModel:
         self,
         port: 'str',
         is_busy: 'bool',
-        id: 'str' = uuid4()
+        id: 'str' = str(uuid4())
     ):
         self._id = id
         self._port = port

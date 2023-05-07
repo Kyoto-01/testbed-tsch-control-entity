@@ -3,7 +3,7 @@ import json
 
 class Database:
 
-    DATABASE_PATH = 'database.json'
+    DATABASE_PATH = 'database/database.json'
 
     @staticmethod
     def get_collections() -> 'dict':
