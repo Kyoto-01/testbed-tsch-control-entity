@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 
 from pprint import pprint
-from configparser import ConfigParser
 
 from allocator import TestbedResourceAllocator
 from models import TestbedModel
@@ -12,15 +11,8 @@ from database import Database
 CONFIG_PATH = '../config.ini'
 
 
-conf = {}
+testbeds = {}
 
-
-def configure_from_file():
-    conf = ConfigParser()
-    conf.read(CONFIG_PATH)
-    conf = dict(conf)
-
-    return conf
 
 def start_testbed(
     name: 'str',
@@ -30,7 +22,7 @@ def start_testbed(
     hopseqLen: 'int',
     hopseq: 'list[int]',
 ):
-    global conf
+    global testbeds
 
     motes = TestbedResourceAllocator.alloc_motes(moteCount)
 
@@ -46,15 +38,14 @@ def start_testbed(
     print('start testbed with config:', end='')
     pprint(testbed.to_dict(), sort_dicts=False)
 
-    control = TestbedControl(testbed, conf)
+    control = TestbedControl(testbed)
+
+    testbeds[testbed.name] = control
     
     control.start_testbed(verbose=True)
 
 
 def main():
-    global conf
-
-    conf = configure_from_file()
 
     prevData = Database.get_collections()
 
@@ -97,4 +88,5 @@ def main():
         raise ex
 
 
-main()
+while True:
+    main()

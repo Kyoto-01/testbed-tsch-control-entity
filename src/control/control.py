@@ -8,7 +8,7 @@ class TestbedProcess:
     def __init__(
         self,
         name: 'str' = None,
-        path: 'str' = None,
+        path: 'str' = None
     ):
         self._name = name
         self._path = path
@@ -38,20 +38,19 @@ class TestbedProcess:
         if not self.is_running():
             self._args = args
 
-            cmd = [self._path]
-            if self._args:
-                cmd += self._args
+            args = ' '.join(args)
+            args = [self._path, args]
 
             self._proc = Popen(
-                args=cmd,
+                args=args,
                 stdin=PIPE,
                 stdout=PIPE,
-                stderr=STDOUT
+                stderr=STDOUT,
             )
 
     def kill(self):
         if self.is_running():
-            self._proc.kill()
+            self._proc.send_signal(2)
             self._proc = None
 
     def restart(self):
@@ -64,10 +63,8 @@ class TestbedControl:
     def __init__(
         self,
         testbed: 'TestbedModel',
-        config: 'dict' = None
     ):
         self._testbed = testbed
-        self._config = config
         self._buildTool: 'TestbedProcess' = None
         self._serialReader: 'TestbedProcess' = None
         self._rpcClient: 'TestbedProcess' = None
@@ -77,17 +74,17 @@ class TestbedControl:
     def _setup(self):
         self._buildTool = TestbedProcess(
             name='Testbed Build Tool',
-            path=self._config['testbed_control']['build_tool_path']
+            path='control/process/start_build_tool.sh'
         )
 
         self._serialReader = TestbedProcess(
             name='Testbed Serial Reader',
-            path=self._config['testbed_control']['serial_reader_path']
+            path='control/process/start_serial_reader.sh'
         )
 
         self._rpcClient = TestbedProcess(
             name='Testbed RPC Client',
-            path=self._config['testbed_control']['rpc_client_path']
+            path='control/process/start_rpc_client.sh'
         )
 
     def start_motes_firmware(self):
@@ -126,6 +123,7 @@ class TestbedControl:
         ports = ','.join(ports)
 
         args = [
+            '-t', self._testbed.name,
             '-p', ports
         ]
 
@@ -136,9 +134,7 @@ class TestbedControl:
 
     def start_rpc_client(self):
         args = [
-            '-a', self._config['rpc_client']['api_addr'],
-            '-p', self._config['rpc_client']['api_port'],
-            '-i', 60,
+            '-i', '60',
             '-r', 'analyze',
             '-g', 'all',
             '-t', self._testbed.name
