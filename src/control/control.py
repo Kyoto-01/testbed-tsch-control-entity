@@ -26,7 +26,10 @@ class TestbedProcess:
 
     @property
     def pid(self):
-        return self._proc.pid
+        pid = None
+        if self._proc:
+            pid = self._proc.pid
+        return pid
 
     def is_running(self):
         return (
@@ -51,6 +54,7 @@ class TestbedProcess:
     def kill(self):
         if self.is_running():
             self._proc.send_signal(2)
+            self._proc.kill()
             self._proc = None
 
     def restart(self):
@@ -70,6 +74,10 @@ class TestbedControl:
         self._rpcClient: 'TestbedProcess' = None
 
         self._setup()
+
+    @property
+    def testbed(self):
+        return self._testbed.to_dict()
 
     def _setup(self):
         self._buildTool = TestbedProcess(
@@ -111,12 +119,14 @@ class TestbedControl:
         ports = [m.port for m in self._testbed.motes]
         ports = ','.join(ports)
 
-        args = [
-            '-f', 'stopped',
-            '-u', ports
-        ]
+        if ports:
+            args = [
+                '-f', 'stopped',
+                '-u', ports
+            ]
 
-        self._buildTool.run(args)
+            self._buildTool.kill()
+            self._buildTool.run(args)
 
     def start_serial_reader(self):
         ports = [m.port for m in self._testbed.motes]
@@ -134,7 +144,7 @@ class TestbedControl:
 
     def start_rpc_client(self):
         args = [
-            '-i', '60',
+            '-i', str(self._testbed.analyzeIntv),
             '-r', 'analyze',
             '-g', 'all',
             '-t', self._testbed.name
@@ -166,3 +176,25 @@ class TestbedControl:
                 if verbose:
                     print(f'start analysis RPC client with '
                         f'PID {self._rpcClient.pid}.')
+                    
+                TestbedModel.insert_testbed(self._testbed)
+
+    def stop_testbed(self, verbose=False):
+        pid = self._rpcClient.pid
+        self.stop_rpc_client()
+        if verbose:
+            print(f'stopping analysis RPC client with '
+                f'PID {pid}.')
+
+        pid = self._serialReader.pid
+        self.stop_serial_reader()
+        if verbose:
+            print(f'stopping serial reader with '
+                f'PID {pid}.')
+
+        self.stop_motes_firmware()
+        if verbose:
+            print(f'stopping motes firmware.')
+        self._buildTool._proc.wait()
+
+        TestbedModel.delete_testbed(self._testbed.id)

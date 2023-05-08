@@ -10,15 +10,20 @@ class TestbedModel:
         self,
         name: 'str',
         motes: 'list',
+        analyzeIntv: 'float',
         txPower: 'int',
         txIntv: 'float',
         hopseqLen: 'int',
         hopseq: 'list[int]',
-        id: 'str' = str(uuid4())
+        id: 'str' = None
     ):
+        if not id:
+            id = str(uuid4())
+    
         self._id = id
         self._name = name
         self._motes = motes
+        self._analyzeIntv = analyzeIntv
         self._txPower = txPower
         self._txIntv = txIntv
         self._hopseqLen = hopseqLen
@@ -35,6 +40,10 @@ class TestbedModel:
     @property
     def motes(self):
         return self._motes
+    
+    @property
+    def analyzeIntv(self):
+        return self._analyzeIntv
     
     @property
     def txPower(self):
@@ -59,6 +68,7 @@ class TestbedModel:
             'id': self._id,
             'name': self._name,
             'motes': motes,
+            'analyze_intv': self._analyzeIntv,
             'tx_power': self._txPower,
             'tx_intv': self._txIntv,
             'hop_seq_len': self._hopseqLen,
@@ -81,6 +91,7 @@ class TestbedModel:
             id=data['id'],
             name=data['name'],
             motes=motes,
+            analyzeIntv=data['analyze_intv'],
             txPower=data['tx_power'],
             txIntv=data['tx_intv'],
             hopseqLen=data['hop_seq_len'],

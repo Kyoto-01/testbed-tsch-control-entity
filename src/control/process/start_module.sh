@@ -24,7 +24,10 @@ eval "./${MODULE_EXEC_FILE} ${args} &"
 PID=$!
 
 function trap_ctrlc() {
+    deactivate
+
     kill -9 ${PID}
+
     exit 2
 }
 
