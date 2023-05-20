@@ -3,93 +3,133 @@
 # Processing parameters
 
 ## action to execute in testbed
+
 action=""
 
 ## testbed motes tx power
+
 firmtxpwr=""
 
 ## testbed motes tx interval
+
 firmtxintv=""
 
 ## testbed motes channel hop sequence length
+
 firmhslen=""
 
 ## testbed motes channel hop sequence in format <ch0>,<ch1>,...,<chn>
+
 firmhopseq=""
 
 ## testbed allocated usb ports
+
 usbports=""
 
 ## testbed name
+
 testbed=""
 
 ## testbed analyze rpc client request interval
+
 analyzeintv=""
 
+## module parameters
+
+build_tool_parameters=""
+
+serial_reader_parameters=""
+
+rpc_client_parameters=""
+ 
 param=""
 for a in $@; do
     case ${param} in
-    "--action") action=${a} ;;
-    "--firmtxpwr") firmtxpwr=${a} ;;
-    "--firmtxintv") firmtxintv=${a} ;;
-    "--firmhslen") firmhslen=${a} ;;
-    "--firmhopseq") firmhopseq=${a} ;;
-    "--usbports") usbports=${a} ;;
-    "--testbed") testbed=${a} ;;
-    "--analyzeintv") analyzeintv=${a} ;;
+    "--action") 
+        action=${a} 
+    ;;
+    "--firmtxpwr") 
+        firmtxpwr=${a}
+        build_tool_parameters="${build_tool_parameters} -p ${a}"
+    ;;
+    "--firmtxintv")
+        firmtxintv=${a}
+        build_tool_parameters="${build_tool_parameters} -i ${a}"
+    ;;
+    "--firmhslen")
+        firmhslen=${a} 
+        build_tool_parameters="${build_tool_parameters} -l ${a}"
+    ;;
+    "--firmhopseq") 
+        firmhopseq=${a} 
+        build_tool_parameters="${build_tool_parameters} -h ${a}"
+    ;;
+    "--usbports") 
+        usbports=${a}
+        build_tool_parameters="${build_tool_parameters} -u ${a}"
+        serial_reader_parameters="${serial_reader_parameters} -p ${a}"
+    ;;
+    "--testbed") 
+        testbed=${a}
+        serial_reader_parameters="${serial_reader_parameters} -t ${a}"
+        rpc_client_parameters="${rpc_client_parameters} -t ${a}"
+    ;;
+    "--analyzeintv") 
+        analyzeintv=${a}
+        rpc_client_parameters="${rpc_client_parameters} -i ${a}"
+    ;;
     esac
     param=${a}
 done
 
+# create file to store testbed processes PIDs
+
+touch ~/pids
+
 if [ ${action} == "start" ];
 then
+
     # Writing client/server firmwares in testbed motes
 
-    bash
     source ~/venvs/testbed-tsch-firmware/bin/activate
     cd ~/testbed-tsch/testbed-tsch-firmware/tools/testbed-build
-    ./testbed-build.sh \
-        -f all \
-        -u ${usbports} \
-        -p ${firmtxpwr} \
-        -i ${firmtxintv} \
-        -l ${firmhslen} \
-        -h ${firmhopseq}
+    eval "./testbed-build.sh -f all ${build_tool_parameters}"
 
     # start serial reader
 
-    bash
     source ~/venvs/testbed-tsch-serial-reader/bin/activate
-    cd ~/testbed-tsch/testbed-tsch-serial-reader/
-    ./main \
-        -t ${testbed} \
-        -p ${usbports}
+    cd ~/testbed-tsch/testbed-tsch-serial-reader/src
+    eval "./main.py ${serial_reader_parameters} &"
+    echo $! >> ~/pids
 
     # start RPC client
 
-    bash
     source ~/venvs/testbed-tsch-rpc-client/bin/activate
-    cd ~/testbed-tsch/testbed-tsch-rpc-client/
-    ./main \
-        -i ${analyzeintv} \
-        -r analyze \
-        -g all \
-        -t ${testbed}
+    cd ~/testbed-tsch/testbed-tsch-rpc-client/src
+    eval "./main.py -r analyze -g all ${rpc_client_parameters} &"
+    echo $! >> ~/pids
 
-    bash
     cd ~
 
 elif [ ${action} == "stop" ];
 then
+
+    # kill testbed pocesses
+
+    for pid in $(cat ~/pids);
+    do
+        kill -9 ${pid}
+    done
+
     # Writing stopped firmware in testbed motes
 
-    bash
     source ~/venvs/testbed-tsch-firmware/bin/activate
     cd ~/testbed-tsch/testbed-tsch-firmware/tools/testbed-build
-    ./testbed-build.sh \
-        -f stopped \
-        -u ${usbports} \
+    eval "./testbed-build.sh -f stopped ${build_tool_parameters}"
 
-    bash
+    # clear testbed processes PIDs file
+
+    rm -f ~/pids
+
     cd ~
 fi

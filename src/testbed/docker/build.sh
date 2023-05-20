@@ -1,3 +1,3 @@
 #!/usr/bin/env bash
 
-docker build -t testbed-experiment:1.0 .
+docker build -t kyoto001/testbed-experiment:1.0 .

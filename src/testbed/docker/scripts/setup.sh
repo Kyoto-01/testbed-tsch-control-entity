@@ -18,6 +18,7 @@ apt install -y \
     git \
     git-lfs \
     curl \
+    wget \
     srecord \
     rlwrap
 
@@ -37,7 +38,8 @@ wget https://armkeil.blob.core.windows.net/developer/Files/downloads/gnu-rm/9-20
 
 tar -xjf gcc-arm-none-eabi-9-2020-q2-update-x86_64-linux.tar.bz2
 
-PATH="$HOME/arm-compiler/gcc-arm-none-eabi-9-2020-q2-update/bin:$PATH"
+echo "if [ -d \"\$HOME/arm-compiler/gcc-arm-none-eabi-9-2020-q2-update/bin\" ] ; then \
+PATH=\"\$HOME/arm-compiler/gcc-arm-none-eabi-9-2020-q2-update/bin:\$PATH\"; fi" >> ~/.profile
 
 echo 'ATTRS{idVendor}=="0451", ATTRS{idProduct}=="16c8", ENV{ID_MM_DEVICE_IGNORE}="1"' >> /lib/udev/rules.d/77-mm-usb-device-blacklist.rules
 
@@ -48,16 +50,16 @@ mkdir ~/testbed-tsch
 cd ~/testbed-tsch
 
 git clone ${FIRMWARE_REPOSITORY}
-pid=$!
-wait pid &> /dev/null
 
 git clone ${SERIAL_READER_REPOSITORY}
-pid=$!
-wait pid &> /dev/null
 
 git clone ${RPC_CLIENT_REPOSITORY}
-pid=$!
-wait pid &> /dev/null
+
+# Create modules configuration files
+
+cp ~/config.ini testbed-tsch-serial-reader
+
+cp ~/config.ini testbed-tsch-rpc-client
 
 # Create and setup Python 3 virtual environments
 
