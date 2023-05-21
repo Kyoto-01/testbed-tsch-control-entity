@@ -82,12 +82,12 @@ for a in $@; do
     param=${a}
 done
 
-# create file to store testbed processes PIDs
-
-touch ~/pids
-
-if [ ${action} == "start" ];
+if [ "${action}" == "start" ];
 then
+
+    # create file to store testbed processes PIDs
+
+    touch ~/pids
 
     # Writing client/server firmwares in testbed motes
 
@@ -100,26 +100,47 @@ then
     source ~/venvs/testbed-tsch-serial-reader/bin/activate
     cd ~/testbed-tsch/testbed-tsch-serial-reader/src
     eval "./main.py ${serial_reader_parameters} &"
-    echo $! >> ~/pids
+
+    SERIAL_READER_PID=$!
+
+    echo "${SERIAL_READER_PID}" >> ~/pids
 
     # start RPC client
 
     source ~/venvs/testbed-tsch-rpc-client/bin/activate
     cd ~/testbed-tsch/testbed-tsch-rpc-client/src
     eval "./main.py -r analyze -g all ${rpc_client_parameters} &"
-    echo $! >> ~/pids
 
-    cd ~
+    RPC_CLIENT_PID=$!
 
-elif [ ${action} == "stop" ];
+    echo "${RPC_CLIENT_PID}" >> ~/pids
+
+    # start print logs
+
+    uptime=0
+
+    while [ -f "${HOME}/pids" ];
+    do
+        echo "running: ${testbed} (${uptime} seconds)"
+        echo "(Serial Reader: ${SERIAL_READER_PID}; RPC Client: ${RPC_CLIENT_PID})"
+
+        uptime=$(( ${uptime} + 5 ))
+        
+        sleep 5
+    done
+
+elif [ "${action}" == "stop" ];
 then
 
     # kill testbed pocesses
 
-    for pid in $(cat ~/pids);
-    do
-        kill -9 ${pid}
-    done
+    if [ -f "${HOME}/pids" ];
+    then
+        for pid in $(cat ~/pids);
+        do
+            kill -9 ${pid}
+        done
+    fi
 
     # Writing stopped firmware in testbed motes
 
@@ -127,9 +148,9 @@ then
     cd ~/testbed-tsch/testbed-tsch-firmware/tools/testbed-build
     eval "./testbed-build.sh -f stopped ${build_tool_parameters}"
 
-    # clear testbed processes PIDs file
+    if [ -f "${HOME}/pids" ];
+    then
+        rm -f ~/pids
+    fi
 
-    rm -f ~/pids
-
-    cd ~
 fi

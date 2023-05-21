@@ -18,3 +18,6 @@ COPY ./config/config.ini config.ini
 
 # setup the testbed experiment container environment
 RUN ./setup.sh
+
+# put the ARM compiler path in the PATH
+ENV PATH "/root/arm-compiler/gcc-arm-none-eabi-9-2020-q2-update/bin:$PATH"
