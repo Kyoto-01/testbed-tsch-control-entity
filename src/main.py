@@ -5,6 +5,9 @@ import json
 from threading import Thread
 from pprint import pprint
 
+from pika.exceptions import ChannelClosedByBroker
+from pika.exceptions import ChannelClosed
+
 from broker import Consumer
 from control import TestbedControl
 from allocator import TestbedResourceAllocator
@@ -86,31 +89,45 @@ def start_testbed(
 ):
     global testbeds
 
+    fail = False
+
     motes = TestbedResourceAllocator.alloc_motes(moteCount)
 
-    testbed = TestbedModel(
-        name=name,
-        motes=motes,
-        analyzeIntv=analyzeIntv,
-        txPower=txPower,
-        txIntv=txIntv,
-        hopseqLen=hsLen,
-        hopseq=hopseq
-    )
+    try:
+        testbed = TestbedModel(
+            name=name,
+            motes=motes,
+            analyzeIntv=analyzeIntv,
+            txPower=txPower,
+            txIntv=txIntv,
+            hopseqLen=hsLen,
+            hopseq=hopseq
+        )
 
-    control = TestbedControl(testbed)
+    except AssertionError:
+        print(
+            'request fail in start testbed stage. ',
+            '(testbed already exists)'
+        )
 
-    testbeds[testbed.name] = control
-
-    if not control.start_testbed():
-        print('request fail in start testbed stage.')
-        
-        for mote in motes:
-            MoteModel.delete_mote(mote.id)
+        fail = True
 
     else:
-        print('start testbed with config:', end='')
-        pprint(testbed.to_dict(), sort_dicts=False)
+        control = TestbedControl(testbed)
+
+        testbeds[testbed.name] = control
+
+        if not control.start_testbed():
+            print('request fail in start testbed stage.')
+            fail = True
+
+        else:
+            print('start testbed with config:', end='')
+            pprint(testbed.to_dict(), sort_dicts=False)
+
+    if fail:
+        for mote in motes:
+            MoteModel.delete_mote(mote.id)
 
 
 def stop_testbed(name: 'str'):
@@ -142,8 +159,13 @@ def main():
 
 
 if __name__ == '__main__':
+
     try:
         main()
+
+    except (ChannelClosedByBroker, ChannelClosed):
+        main()
+
     except KeyboardInterrupt as ki:
         print('testbed tsch control entity closed.')
         consumer.close()

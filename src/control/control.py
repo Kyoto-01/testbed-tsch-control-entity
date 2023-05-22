@@ -101,10 +101,10 @@ class TestbedControl:
 
             if not output or output.returncode != 0:
                 ret = False
-            else:
-                TestbedModel.delete_testbed(self._testbed.id)
-                for mote in self._testbed.motes:
-                    MoteModel.delete_mote(mote.id)
+
+            TestbedModel.delete_testbed(self._testbed.id)
+            for mote in self._testbed.motes:
+                MoteModel.delete_mote(mote.id)
         
         else:
             ret = False
