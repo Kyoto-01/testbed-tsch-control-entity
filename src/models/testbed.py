@@ -17,6 +17,8 @@ class TestbedModel:
         hopseq: 'list[int]',
         id: 'str' = None
     ):
+        assert self.__class__.check_testbed_exists(name) == False
+        
         if not id:
             id = str(uuid4())
     
@@ -115,14 +117,15 @@ class TestbedModel:
 
     @staticmethod
     def insert_testbed(data: 'TestbedModel') -> 'str':
-        collections = Database.get_collections()
+        if not TestbedModel.check_testbed_exists(data.name):
+            collections = Database.get_collections()
 
-        if data.id:
-            collections['resources']['testbeds'][data.id] = data.to_dict()
+            if data.id:
+                collections['resources']['testbeds'][data.id] = data.to_dict()
 
-            Database.set_collections(collections)
+                Database.set_collections(collections)
 
-        return data.id
+            return data.id
 
     @staticmethod
     def delete_testbed(id: 'str') -> 'str':
@@ -134,3 +137,14 @@ class TestbedModel:
             Database.set_collections(collections)
 
         return id
+
+    @staticmethod
+    def check_testbed_exists(name: 'str') -> 'bool':
+        collections = Database.get_collections()
+        collections = collections['resources']['testbeds']
+
+        for record in collections.values():
+            if record['name'] == name:
+                return True
+
+        return False

@@ -1,27 +1,77 @@
 #!/usr/bin/env python3
 
+import sys
+import json
+from threading import Thread
 from pprint import pprint
 
-from allocator import TestbedResourceAllocator
-from models import TestbedModel
+from broker import Consumer
 from control import TestbedControl
-from database import Database
+from allocator import TestbedResourceAllocator
+
+from models import TestbedModel
+from models import MoteModel
+
+from utils.config import configure_from_file
 
 
-CONFIG_PATH = '../config.ini'
+CONFIG_FILE = "../config.ini"
 
+
+conf = {}
 
 testbeds = {}
+
+consumer = None
+
+
+def configure():
+    global conf
+
+    conf = configure_from_file(CONFIG_FILE)
+
+
+def callback(ch, method, properties, body):
+    msg = json.loads(body)
+
+    Thread(target=analyze_message, args=(msg,))
+
+
+def analyze_message(msg: 'dict'):
+    action = msg['action']
+    testbedName = msg['testbed']
+
+    if action == 'start':
+
+        moteCount = int(msg['provision']['mote_count'])
+        txPower = int(msg['provision']['tx_power'])
+        txIntv = float(msg['provision']['tx_intv'])
+        hsLen = int(msg['provision']['hs_len'])
+        hopseq = msg['provision']['hopseq']
+        analyzeIntv = float(msg['provision']['analyze_intv'])
+
+        start_testbed(
+            name=testbedName,
+            moteCount=moteCount,
+            txPower=txPower,
+            txIntv=txIntv,
+            hsLen=hsLen,
+            hopseq=hopseq,
+            analyzeIntv=analyzeIntv
+        )
+
+    elif action == 'stop':
+        stop_testbed()
 
 
 def start_testbed(
     name: 'str',
     moteCount: 'int',
-    analyzeIntv: 'int',
     txPower: 'int',
     txIntv: 'float',
-    hopseqLen: 'int',
-    hopseq: 'list[int]',
+    hsLen: 'int',
+    hopseq: 'str',
+    analyzeIntv: 'float'
 ):
     global testbeds
 
@@ -33,81 +83,52 @@ def start_testbed(
         analyzeIntv=analyzeIntv,
         txPower=txPower,
         txIntv=txIntv,
-        hopseqLen=hopseqLen,
+        hopseqLen=hsLen,
         hopseq=hopseq
     )
-
-    print('start testbed with config:', end='')
-    pprint(testbed.to_dict(), sort_dicts=False)
 
     control = TestbedControl(testbed)
 
     testbeds[testbed.name] = control
-    
-    control.start_testbed(verbose=True)
+
+    if not control.start_testbed():
+        for mote in motes:
+            MoteModel.delete_mote(mote.id)
+    else:
+        print('start testbed with config:', end='')
+        pprint(testbed.to_dict(), sort_dicts=False)
+
+
+def stop_testbed(name: 'str'):
+    global testbeds
+
+    if name in testbeds:
+        if testbeds[name].stop_testbed():
+            print(f'stop testbed {name}.')
 
 
 def main():
-    global testbeds
+    global consumer
 
-    print('What do you want to do?')
-    print('[1] start a new testbed')
-    print('[2] stop an existing testbed')
-    print('[3] List existing testbeds')
+    configure()
+    
+    print('testbed tsch control entity started.')
+    print('waiting for testbed control requests...')
 
-    option = input('->')
+    consumer = Consumer(
+        host=conf['addr'],
+        port=conf['port'],
+        queue=conf['queue'],
+        callback=callback
+    )
 
-    try:
-        if option == '1':
-            name = input('testbed name ->')
-
-            moteCount = input('testbed mote count ->')
-            if not moteCount:
-                moteCount = '2'
-            moteCount = int(moteCount)
-
-            analyzeIntv = input('testbed analyze interval ->')
-            if not analyzeIntv:
-                analyzeIntv = '60'
-            analyzeIntv = int(analyzeIntv)
-
-            txPower = input('testbed clients tx power ->')
-            txIntv = input('testbed clients tx interval ->')
-            hopseqLen = input('testbed motes hop sequence length ->')
-            hopseq = input('testbed clients hop sequence ->').split(',')
-
-            start_testbed(
-                name=name,
-                moteCount=moteCount,
-                analyzeIntv=analyzeIntv,
-                txPower=txPower,
-                txIntv=txIntv,
-                hopseqLen=hopseqLen,
-                hopseq=hopseq
-            )
-        elif option == '2':
-            name = input('testbed name ->')
-
-            if name in testbeds:
-                testbeds[name].stop_testbed(verbose=True)
-        elif option == '3':
-            testbedList = [t.testbed for t in testbeds.values()]
-            pprint(testbedList, sort_dicts=False)
-        else:
-            print('Invalid option.')
-
-    except Exception as ex:
-        Database.set_collections(prevData)
-        raise ex
+    consumer.start()
 
 
-prevData = Database.get_collections()
-
-while True:
+if __name__ == '__main__':
     try:
         main()
     except KeyboardInterrupt as ki:
-        Database.set_collections(prevData)
-        break
-    except Exception as ex:
-        raise ex
+        print('testbed tsch control entity closed.')
+        consumer.close()
+        sys.exit(0)

@@ -90,7 +90,6 @@ class MoteModel:
     @staticmethod
     def delete_mote(id: 'str') -> 'str':
         collections = Database.get_collections()
-        collections = collections['resources']['motes']
 
         if id in collections['resources']['motes']:
             del collections['resources']['motes'][id]
