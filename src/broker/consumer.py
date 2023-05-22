@@ -24,7 +24,6 @@ class Consumer:
     def _subscribe(self):
         self._channel.queue_declare(
             queue=self._queue, 
-            exclusive=True, 
             auto_delete=True
         )
         

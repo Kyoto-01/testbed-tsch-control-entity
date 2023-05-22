@@ -49,13 +49,13 @@ class TestbedControl:
                 self._testbed.name,
             ]
 
-            cmd += ['--firmtxpwr', self._testbed.txPower] \
+            cmd += ['--firmtxpwr', str(self._testbed.txPower)] \
                 if self._testbed.txPower else []
             
-            cmd += ['--firmtxintv', self._testbed.txIntv] \
+            cmd += ['--firmtxintv', str(self._testbed.txIntv)] \
                 if self._testbed.txIntv else []
             
-            cmd += ['--firmhslen', self._testbed.hopseqLen] \
+            cmd += ['--firmhslen', str(self._testbed.hopseqLen)] \
                 if self._testbed.hopseqLen else []
             
             cmd += ['--firmhopseq', hopseq] \
