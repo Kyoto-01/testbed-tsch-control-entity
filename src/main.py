@@ -15,6 +15,8 @@ from allocator import TestbedResourceAllocator
 from models import TestbedModel
 from models import MoteModel
 
+from database import Database
+
 from protocol import decoder
 from utils.config import configure_from_file
 
@@ -161,6 +163,8 @@ def main():
 if __name__ == '__main__':
 
     try:
+        Database.reset()
+        
         main()
 
     except (ChannelClosedByBroker, ChannelClosed):

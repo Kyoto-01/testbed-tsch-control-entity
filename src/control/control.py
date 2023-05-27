@@ -84,6 +84,12 @@ class TestbedControl:
         ports = ','.join(ports)
 
         if ports:
+
+            TestbedModel.delete_testbed(self._testbed.id)
+            
+            for mote in self._testbed.motes:
+                MoteModel.delete_mote(mote.id)
+
             cmd = [
                 'docker', 
                 'exec', 
@@ -101,10 +107,6 @@ class TestbedControl:
 
             if not output or output.returncode != 0:
                 ret = False
-
-            TestbedModel.delete_testbed(self._testbed.id)
-            for mote in self._testbed.motes:
-                MoteModel.delete_mote(mote.id)
         
         else:
             ret = False

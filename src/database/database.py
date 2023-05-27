@@ -27,3 +27,14 @@ class Database:
         with Database.MUTEX:
             with open(Database.DATABASE_PATH, 'w') as f:
                 f.write(data)
+
+    @staticmethod
+    def reset():
+        data = {
+            'resources': {
+                'motes': {},
+                'testbeds': {}
+            }
+        }
+
+        Database.set_collections(data)
