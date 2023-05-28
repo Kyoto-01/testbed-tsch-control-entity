@@ -138,6 +138,7 @@ then
     then
         for pid in $(cat ~/pids);
         do
+            kill -s SIGINT ${pid}
             kill -9 ${pid}
         done
     fi
