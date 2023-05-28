@@ -96,6 +96,9 @@ def start_testbed(
     motes = TestbedResourceAllocator.alloc_motes(moteCount)
 
     try:
+
+        hopseq = [int(ch) for ch in hopseq.split(',') if ch]
+
         testbed = TestbedModel(
             name=name,
             motes=motes,
@@ -107,6 +110,7 @@ def start_testbed(
         )
 
     except AssertionError:
+
         print(
             'request fail in start testbed stage. ',
             '(testbed already exists)'
@@ -115,6 +119,7 @@ def start_testbed(
         fail = True
 
     else:
+
         control = TestbedControl(testbed)
 
         testbeds[testbed.name] = control
@@ -164,7 +169,7 @@ if __name__ == '__main__':
 
     try:
         Database.reset()
-        
+
         main()
 
     except (ChannelClosedByBroker, ChannelClosed):
