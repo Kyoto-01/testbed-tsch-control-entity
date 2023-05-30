@@ -49,6 +49,8 @@ mkdir ~/testbed-tsch
 
 cd ~/testbed-tsch
 
+mv ~/control . 
+
 git clone ${FIRMWARE_REPOSITORY}
 
 git clone ${SERIAL_READER_REPOSITORY}
@@ -56,6 +58,8 @@ git clone ${SERIAL_READER_REPOSITORY}
 git clone ${RPC_CLIENT_REPOSITORY}
 
 # Create modules configuration files
+
+cp ~/config.ini control
 
 cp ~/config.ini testbed-tsch-serial-reader
 
@@ -66,6 +70,11 @@ cp ~/config.ini testbed-tsch-rpc-client
 mkdir ~/venvs
 
 cd ~/venvs
+
+python3 -m virtualenv testbed-tsch-control-script
+source testbed-tsch-control-script/bin/activate
+python3 -m  pip install -r ~/testbed-tsch/control/requirements.txt
+deactivate
 
 python3 -m virtualenv testbed-tsch-firmware
 source testbed-tsch-firmware/bin/activate

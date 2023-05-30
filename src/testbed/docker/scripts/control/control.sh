@@ -85,6 +85,12 @@ done
 if [ "${action}" == "start" ];
 then
 
+    # Record testbed start action in database
+
+    source ~/venvs/testbed-tsch-control-script/bin/activate
+    cd ~/testbed-tsch/control
+    ./control_db.py --action start --testbed ${testbed}
+
     # create file to store testbed processes PIDs
 
     touch ~/pids
@@ -132,13 +138,18 @@ then
 elif [ "${action}" == "stop" ];
 then
 
+    # Record testbed stop action in database
+
+    source ~/venvs/testbed-tsch-control-script/bin/activate
+    cd ~/testbed-tsch/control
+    ./control_db.py --action stop --testbed ${testbed}
+
     # kill testbed pocesses
 
     if [ -f "${HOME}/pids" ];
     then
         for pid in $(cat ~/pids);
         do
-            kill -s SIGINT ${pid}
             kill -9 ${pid}
         done
     fi
