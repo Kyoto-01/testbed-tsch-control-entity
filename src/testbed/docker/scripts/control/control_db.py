@@ -43,6 +43,19 @@ def main():
         fields={'status': config['action']}
     )
 
+    #
+    # It's a hack. 
+    #
+    # "testbed-main" is a necessary bucket to grab general 
+    # reports, but the following functionality should be 
+    # optimized in the future, as the way it is being 
+    # implemented, it will try to create this bucket every 
+    # time an experiment is created.
+    #
+
+    if config['action'] == 'start':
+        database.create_bucket('testbed-main')
+
     database.close()
 
 
